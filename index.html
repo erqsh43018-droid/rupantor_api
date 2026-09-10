@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Payment Store</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+    background:#f5f7fb;
+    font-family:Arial,Helvetica,sans-serif;
+    color:#111827;
+}
+
+.container{
+    width:min(900px,92%);
+    margin:0 auto;
+    padding:50px 0;
+}
+
+.header{
+    text-align:center;
+    margin-bottom:35px;
+}
+
+.header h1{
+    margin:0;
+    font-size:30px;
+}
+
+.header p{
+    margin-top:8px;
+    color:#6b7280;
+}
+
+.products{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:16px;
+}
+
+.product{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:22px;
+    box-shadow:0 8px 25px rgba(0,0,0,.05);
+}
+
+.product h2{
+    margin:0 0 10px;
+    font-size:19px;
+}
+
+.price{
+    font-size:25px;
+    font-weight:700;
+    margin-bottom:18px;
+}
+
+.buy{
+    width:100%;
+    border:0;
+    border-radius:10px;
+    padding:13px;
+    background:#1769ff;
+    color:#fff;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.buy:hover{
+    opacity:.9;
+}
+
+.buy:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+}
+
+.message{
+    display:none;
+    margin-top:25px;
+    padding:14px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    text-align:center;
+}
+
+.success{
+    border-color:#22c55e;
+    color:#15803d;
+}
+
+.error{
+    border-color:#ef4444;
+    color:#b91c1c;
+}
+
+@media(max-width:600px){
+
+    .container{
+        padding:30px 0;
+    }
+
+    .products{
+        grid-template-columns:1fr;
+    }
+
+    .header h1{
+        font-size:25px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>Payment Store</h1>
+        <p>Select a product and continue to payment.</p>
+    </div>
+
+    <div class="products">
+
+        <div class="product">
+            <h2>Product 1</h2>
+            <div class="price">৳2</div>
+
+            <button
+                class="buy"
+                onclick="buyProduct('Product 1',2,this)">
+                Buy Now
+            </button>
+        </div>
+
+
+        <div class="product">
+            <h2>Product 2</h2>
+            <div class="price">৳3</div>
+
+            <button
+                class="buy"
+                onclick="buyProduct('Product 2',3,this)">
+                Buy Now
+            </button>
+        </div>
+
+
+        <div class="product">
+            <h2>Product 3</h2>
+            <div class="price">৳4</div>
+
+            <button
+                class="buy"
+                onclick="buyProduct('Product 3',4,this)">
+                Buy Now
+            </button>
+        </div>
+
+
+        <div class="product">
+            <h2>Product 4</h2>
+            <div class="price">৳5</div>
+
+            <button
+                class="buy"
+                onclick="buyProduct('Product 4',5,this)">
+                Buy Now
+            </button>
+        </div>
+
+
+        <div class="product">
+            <h2>Product 5</h2>
+            <div class="price">৳7</div>
+
+            <button
+                class="buy"
+                onclick="buyProduct('Product 5',7,this)">
+                Buy Now
+            </button>
+        </div>
+
+    </div>
+
+
+    <div
+        id="message"
+        class="message">
+    </div>
+
+</div>
+
+
+<script>
+
+async function buyProduct(product,amount,button){
+
+    button.disabled = true;
+    button.textContent = "Loading...";
+
+    const message =
+        document.getElementById("message");
+
+    message.style.display = "block";
+    message.className = "message";
+    message.textContent =
+        "Connecting to payment gateway...";
+
+
+    try{
+
+        const response =
+            await fetch("/api/create-payment",{
+
+                method:"POST",
+
+                headers:{
+                    "Content-Type":"application/json"
+                },
+
+                body:JSON.stringify({
+                    product:product,
+                    amount:amount
+                })
+
+            });
+
+
+        const data =
+            await response.json();
+
+
+        if(!response.ok || !data.payment_url){
+
+            throw new Error(
+                data.message ||
+                "Unable to create payment."
+            );
+
+        }
+
+
+        window.location.href =
+            data.payment_url;
+
+
+    }catch(error){
+
+        console.error(error);
+
+        message.className =
+            "message error";
+
+        message.textContent =
+            error.message ||
+            "Payment could not be started.";
+
+        button.disabled = false;
+        button.textContent = "Buy Now";
+
+    }
+
+}
+
+
+/*
+ * Check whether customer has returned
+ * from RupantorPay.
+ */
+
+async function checkPayment(){
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+
+    const payment =
+        params.get("payment");
+
+    const transactionId =
+        params.get("transactionId");
+
+    const paymentAmount =
+        params.get("paymentAmount");
+
+
+    if(payment === "cancel"){
+
+        const message =
+            document.getElementById("message");
+
+        message.style.display = "block";
+
+        message.className =
+            "message error";
+
+        message.textContent =
+            "Payment cancelled.";
+
+        return;
+
+    }
+
+
+    if(
+        payment === "success" &&
+        transactionId
+    ){
+
+        const message =
+            document.getElementById("message");
+
+        message.style.display = "block";
+
+        message.className =
+            "message";
+
+        message.textContent =
+            "Verifying payment...";
+
+
+        /*
+         * Get expected amount
+         * from the product in URL.
+         */
+
+        const product =
+            params.get("product");
+
+
+        const productPrices = {
+
+            "Product 1":2,
+            "Product 2":3,
+            "Product 3":4,
+            "Product 4":5,
+            "Product 5":7
+
+        };
+
+
+        const expectedAmount =
+            productPrices[product];
+
+
+        if(!expectedAmount){
+
+            message.className =
+                "message error";
+
+            message.textContent =
+                "Invalid product.";
+
+            return;
+
+        }
+
+
+        try{
+
+            const response =
+                await fetch(
+                    "/api/verify-payment",
+                    {
+
+                        method:"POST",
+
+                        headers:{
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify({
+
+                                transactionId:
+                                    transactionId,
+
+                                expectedAmount:
+                                    expectedAmount
+
+                            })
+
+                    }
+                );
+
+
+            const result =
+                await response.json();
+
+
+            if(
+                response.ok &&
+                result.success
+            ){
+
+                message.className =
+                    "message success";
+
+                message.innerHTML = `
+                    <strong>Payment Successful ✓</strong><br><br>
+                    Product: ${product}<br>
+                    Amount: ৳${result.amount}<br>
+                    Transaction: ${result.transaction_id}
+                `;
+
+
+                /*
+                 * Remove payment parameters
+                 * from browser URL.
+                 */
+
+                window.history.replaceState(
+                    {},
+                    document.title,
+                    "/"
+                );
+
+
+            }else{
+
+                message.className =
+                    "message error";
+
+                message.textContent =
+                    result.message ||
+                    "Payment verification failed.";
+
+            }
+
+
+        }catch(error){
+
+            console.error(error);
+
+            message.className =
+                "message error";
+
+            message.textContent =
+                "Unable to verify payment.";
+
+        }
+
+    }
+
+}
+
+
+checkPayment();
+
+</script>
